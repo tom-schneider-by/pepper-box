@@ -43,6 +43,8 @@ public class PropsKeys {
     public static final String PORT = "port";
     public static final String BROKER_IDS_ZK_PATH = "/brokers/ids";
     public static final String KEYED_MESSAGE_KEY = "keyed.message";
+    public static final String MESSAGE_HEADERS = "message.headers";
+    public static final String MESSAGE_HEADERS_DEFAULT = "";
     public static final String KEYED_MESSAGE_DEFAULT = "NO";
     public static final String MESSAGE_KEY_PLACEHOLDER_KEY = "message.key.placeholder";
     public static final String MESSAGE_VAL_PLACEHOLDER_KEY = "message.value.placeholder";

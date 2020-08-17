@@ -1,10 +1,16 @@
 
 package com.gslab.pepper.sampler;
 
-import com.eclipsesource.json.Json;
-import com.eclipsesource.json.JsonObject;
-import com.gslab.pepper.util.ProducerKeys;
-import com.gslab.pepper.util.PropsKeys;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
@@ -15,17 +21,20 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.config.SslConfigs;
-import org.apache.kafka.common.protocol.SecurityProtocol;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.log.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
+import com.eclipsesource.json.Json;
+import com.eclipsesource.json.JsonObject;
+import com.gslab.pepper.util.ProducerKeys;
+import com.gslab.pepper.util.PropsKeys;
 
 /**
  * The PepperBoxKafkaSampler class custom java sampler for jmeter.
@@ -71,6 +80,7 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         defaultParameters.addArgument(ProducerConfig.SEND_BUFFER_CONFIG, ProducerKeys.SEND_BUFFER_CONFIG_DEFAULT);
         defaultParameters.addArgument(ProducerConfig.RECEIVE_BUFFER_CONFIG, ProducerKeys.RECEIVE_BUFFER_CONFIG_DEFAULT);
         defaultParameters.addArgument(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.PLAINTEXT.name);
+        defaultParameters.addArgument(PropsKeys.MESSAGE_HEADERS, PropsKeys.MESSAGE_HEADERS_DEFAULT);
         defaultParameters.addArgument(PropsKeys.KEYED_MESSAGE_KEY, PropsKeys.KEYED_MESSAGE_DEFAULT);
         defaultParameters.addArgument(PropsKeys.MESSAGE_KEY_PLACEHOLDER_KEY, PropsKeys.MSG_KEY_PLACEHOLDER);
         defaultParameters.addArgument(PropsKeys.MESSAGE_VAL_PLACEHOLDER_KEY, PropsKeys.MSG_PLACEHOLDER);
@@ -79,6 +89,7 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         defaultParameters.addArgument(ProducerKeys.JAVA_SEC_KRB5_CONFIG, ProducerKeys.JAVA_SEC_KRB5_CONFIG_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.SASL_KERBEROS_SERVICE_NAME, ProducerKeys.SASL_KERBEROS_SERVICE_NAME_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.SASL_MECHANISM, ProducerKeys.SASL_MECHANISM_DEFAULT);
+        defaultParameters.addArgument(SaslConfigs.SASL_JAAS_CONFIG, "<JAAS Sasl Config>");
 
         defaultParameters.addArgument(ProducerKeys.SSL_ENABLED, ProducerKeys.FLAG_NO);
         defaultParameters.addArgument(SslConfigs.SSL_KEY_PASSWORD_CONFIG, "<Key Password>");
@@ -116,6 +127,7 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, context.getParameter(ProducerConfig.COMPRESSION_TYPE_CONFIG));
         props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, context.getParameter(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG));
         props.put(ProducerKeys.SASL_MECHANISM, context.getParameter(ProducerKeys.SASL_MECHANISM));
+        props.put(SaslConfigs.SASL_JAAS_CONFIG, context.getParameter(SaslConfigs.SASL_JAAS_CONFIG));
 
         Iterator<String> parameters = context.getParameterNamesIterator();
         parameters.forEachRemaining(parameter -> {
@@ -176,6 +188,13 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
             } else {
                 producerRecord = new ProducerRecord<String, Object>(topic, message_val);
             }
+            String headerString = context.getParameter(PropsKeys.MESSAGE_HEADERS);
+            Arrays.stream(StringUtils.split(headerString, ","))
+                    .map(this::toPair)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .forEach(pair -> producerRecord.headers().add(pair.getLeft(), pair.getRight()));
+
             producer.send(producerRecord);
             sampleResult.setResponseData(message_val.toString(), StandardCharsets.UTF_8.name());
             sampleResult.setSuccessful(true);
@@ -190,6 +209,14 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         }
 
         return sampleResult;
+    }
+
+    private Optional<Pair<String, byte[]>> toPair(String headerEntry) {
+        String parts[] = StringUtils.split(headerEntry, "=");
+        if (parts.length == 2) {
+            return Optional.of(Pair.of(parts[0], parts[1].getBytes(StandardCharsets.US_ASCII)));
+        }
+        return Optional.empty();
     }
 
     @Override
