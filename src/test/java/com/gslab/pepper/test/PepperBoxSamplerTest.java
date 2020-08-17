@@ -25,6 +25,7 @@ import org.apache.kafka.common.utils.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,6 +35,7 @@ import java.util.Properties;
 /**
  * Created by satish on 5/3/17.
  */
+@Ignore
 public class PepperBoxSamplerTest {
 
     private static final String ZKHOST = "127.0.0.1";

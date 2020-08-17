@@ -18,6 +18,7 @@ import org.apache.kafka.common.utils.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -30,6 +31,7 @@ import java.util.Properties;
 /**
  * Created by satish on 5/3/17.
  */
+@Ignore
 public class PepperBoxLoadGenTest {
     private static final String ZKHOST = "127.0.0.1";
     private static final String BROKERHOST = "127.0.0.1";
