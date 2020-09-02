@@ -1,0 +1,15 @@
+[
+    {
+        "id" : "by-pepper-box",
+        "name": "Pepperbox Plugin",
+		"description": "Pepperbox Plugin",
+        "vendor": "blueyonder",
+        "helpUrl": "https://github.com/tom-schneider-by/pepper-box",
+        "markerClass": "com.gslab.pepper.sampler.PepperBoxKafkaSampler",
+        "versions" : {
+            "1.0" : {
+                "downloadUrl" : "<url>"
+            }
+        }
+    }
+]
